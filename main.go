@@ -44,10 +44,21 @@ func (s *Server) readLoop(ws *websocket.Conn) {
 			continue
 		}
 		msg := buf[:n]
-		fmt.Println(string(msg))
+		//fmt.Println(string(msg))
 		// we are going to make a chat real quick
 		// we can reply with
-		ws.Write([]byte("thank you for the msg !!!"))
+		//ws.Write([]byte("thank you for the msg !!!"))
+		s.broadcast(msg)
+	}
+}
+
+func (s *Server) broadcast(b []byte) {
+	for ws := range s.conns {
+		go func(ws *websocket.Conn) {
+			if _, err := ws.Write(b); err != nil {
+				fmt.Println("write error", err)
+			}
+		}(ws)
 	}
 }
 
@@ -55,5 +66,5 @@ func main() {
 
 	server := NewServer()
 	http.Handle("/ws", websocket.Handler(server.handleWS))
-	http.ListenAndServe("3000", nil)
+	http.ListenAndServe(":3000", nil)
 }
