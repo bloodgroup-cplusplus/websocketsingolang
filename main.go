@@ -1,11 +1,59 @@
 package main
 
-import "golang.org/x/net/websocket"
+import (
+	"fmt"
+	"io"
+	"net/http"
+
+	"golang.org/x/net/websocket"
+)
 
 type Server struct {
 	conns map[*websocket.Conn]bool
 }
 
+func NewServer() *Server {
+	return &Server{
+		conns: make(map[*websocket.Conn]bool),
+	}
+}
+
+// this is for the chat
+func (s *Server) handleWS(ws *websocket.Conn) {
+	fmt.Println("new incoming connection from clienit", ws.RemoteAddr())
+	// each time the client is going to connect to the handler and we are going
+	// to keep track of that connection
+	// we need to write it
+	s.conns[ws] = true
+
+	// we are going to listen to messages to they send
+	s.readLoop(ws)
+}
+
+func (s *Server) readLoop(ws *websocket.Conn) {
+	buf := make([]byte, 1024)
+	for {
+		n, err := ws.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+				// conneciton on the other side has closed itself
+
+			}
+			fmt.Println("read error", err)
+			continue
+		}
+		msg := buf[:n]
+		fmt.Println(string(msg))
+		// we are going to make a chat real quick
+		// we can reply with
+		ws.Write([]byte("thank you for the msg !!!"))
+	}
+}
+
 func main() {
 
+	server := NewServer()
+	http.Handle("/ws", websocket.Handler(server.handleWS))
+	http.ListenAndServe("3000", nil)
 }
